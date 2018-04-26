@@ -1,108 +1,63 @@
-default_args:
-  testbed_file: './projects/citi/need/to/edit.yaml'
-  duts: ['TBD']
-  git_ref: 'release_nexus_upgrade_1.0'    # use on TM2
-  debug: True # TESTING ARGS  # False runs upgrade same as in production.
-  debug_values:               # Debug True runs only what is True below
-    traffic: False            # start/stop streams and downloads .csv result files
-    show_commands: True       # show commands below in yaml
-    pre_checks: False          # memory, disk space, modules, and feature checks
-    # Recommend put images on box instead of download from server at this time. 
-    downloads: False          # http, ftp, md5 and computability
-    install: True             # install and reboot
-    post_checks: True         # modules and feature checks and post show commands
-    running_configs: True     # pre and post running configs
-    end_validation: True      # compiles diff between configs (running_configs=True required)
-  spirent:
-    mock: True
-    config_xml: 'projects/citi/needs_to_be_edited.xml'
-    chassis_ip: '10.122.24.200'
-    version: '4.75'
-  skipsetup: True
-  skipcleanup: True
-#common_setup:
-#    name: testcases/agilis_core/base/common_spirent_setup_base.yaml
-#common_cleanup:
-#    name: testcases/agilis_core/base/common_spirent_cleanup_base.yaml
-testcases:
-  - name: './testcases/nexus/utility/nexus_upgrade_test.py'
-    args:
-      upgrade_details:
-        DC3-N3064-HL-A3:
-          upgrade_type: 'install-all'
-          bootimage_name: 'nxos.7.0.3.I7.1.bin'
-          bootimage_md5:  '992d7e1d565ae4665ca3df8873223381'
-          bootimage_size: '882475008'
-          kickstart_name: ''
-          kickstart_md5: ''
-          kickstart_size: ''
-          alternative_bootimage_http_address: ''
-          alternative_kickstart_http_address: ''
-          # TOR interfaces shut before firewall if specified
-          tor_downstream_interfaces:
-            - ''
-          firewall_interfaces:
-            - ''
-          # l3 downstream shut before upstream unless specified
-          l3_upstream_interfaces:
-            - ''
-          shut_l3_downstream_first: True
-      #Show commands: default and device specific sorted by categories.
-      default_show_commands:
-        platform_related:
-          - 'show module'
-          - 'show diagnostic result module all'
-          - 'show version'
-          - 'show inventory'
-          - 'show environment'
-          - 'show environment fan detail'
-          - 'show logging onboard exception-log'
-        version_related:
-          - 'show running-config | no-more'
-        vlan_related:
-          - 'show vlan'
-          - 'show spanning-tree'
-        vpc_related:
-          - ''
-        interface_related:
-          - 'show interface'
-          - 'show interface transceiver'
-          - 'show interface transceiver details'
-          - 'show interface status'
-          - 'show interface description'
-          - 'show ip interface brief'
-          - 'show port-channel summary'
-          - 'show cdp neighbor'
-          - 'show interface trunk'
-        layer_related:
-          - 'show forwarding adjacency'
-          - 'show ip arp vrf all'
-          - 'show ip route'
-      device_specific_show_commands:
-        platform_related:
-          - ''
-        version_related:
-          - ''
-        vlan_related:
-          - ''
-        vpc_related:
-          - ''
-        interface_related:
-          - ''
-        layer_related:
-          - 'show ip bgp summary'
-        other:
-          - 'show system internal kernel messages'
-          - 'show mac address-table'
-          - 'show lldp neighbors'
-          - 'show users'
-          - 'show processes memory'
-          - 'show switchname'
-          - 'show system cores'
-          - 'show system reset-reason'
-          - 'show system resources'
-          - 'show system uptime'
-          - 'show license host-id'
-          - 'show ip process'
-          - 'show ip process vrf management'
-          - 'show banner motd'
+*** Settings ***
+# Include all of our basic keywords, documented here:
+# http://agilis-api-docs.cisco.com/#agilis_robot/agilis_robot.library.basic/
+Library     agilis_robot.library.spirent
+Library     agilis_robot.library.basic
+
+# Include all the keywords from the opensource libraries from robot framework:
+# http://robotframework.org/robotframework/#standard-libraries
+
+Library     String
+Library     BuiltIn
+Library     Dialogs
+Library     DateTime
+Library     Collections
+
+
+*** Variables ***
+# Define variables as required for your test case definition
+# Define DUT and image versions for upgrade
+${DUT}=  N3K_LEAF_5
+${CURRENT_VERSION}=  nxos.7.0.3.F3.4.bin
+${UPGRADE_VERSION}=  nxos.7.0.3.F3.3.bin
+
+*** Keywords ***
+# Define user defined keywords if needed 
+
+*** Test Cases ***
+# Define writing your robot program
+Connect to Device
+    load testbed
+    connect to device ${DUT}
+    # dont ask for yes or no prompt just do it
+    run terminal dont-ask
+Verify Current Image Version
+    run show version
+    run show version | i NXOS:
+    run sh version | i 'NXOS image file is:'
+    output contains ${CURRENT_VERSION}
+    Set Test Message  Current Version of ${DUT} is ${CURRENT_VERSION}
+Check Upgrade Image Versison is present on the DUT
+    run dir bootflash:///
+    run dir bootflash:/// | i ${UPGRADE_VERSION}
+    Set Test Message  bootflash contains ${UPGRADE_VERSION}
+Backup running configuration before upgrade procedure
+    run copy running-config bootflash:robot_before_upgrade_$(SWITCHNAME)_$(TIMESTAMP)
+Set Boot variable to Upgrade Image Versison
+    run show boot
+    run conf t
+    run boot nxos bootflash:${UPGRADE_VERSION}
+    sleep 20
+Verify Boot variable is set to Upgrade Image Versison in running configuraton
+    run show run | i boot
+    output contains boot nxos bootflash:/${UPGRADE_VERSION}
+Save and reload the switch to complete upgrade process
+    run copy running-config startup-config
+    run reload
+    BuiltIn.Wait Until Keyword Succeeds  15min  30 sec  connect to device ${DUT}
+Verify New Image Version
+    run show version
+    run show version | i NXOS:
+    run sh version | i 'NXOS image file is:'
+    output contains ${UPGRADE_VERSION}
+    Set Test Message  Current Version of ${DUT} is ${UPGRADE_VERSION}
