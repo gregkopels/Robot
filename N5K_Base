@@ -1,0 +1,55 @@
+*** Settings ***
+# Uncomment out libraries that are needed
+# http://agilis-api-docs.cisco.com/#agilis_robot/keywords/agilis_robot.library.basic/
+Library     agilis_robot.library.basic
+# Include all the keywords from the opensource libraries from robot framework:
+# http://robotframework.org/robotframework/#standard-libraries
+Library     String
+Library     BuiltIn
+Library     Dialogs
+Library     DateTime
+Library   Collections
+
+# If you'd like to have a setup and a teardown. Note: Suite setup and suite teardown
+# will be run before and after each test case in the *** Test Cases *** section
+# (if you only want each to run once, then only have one test case)
+# Suite Setup   Testcase Setup
+# Suite Teardown    Testcase Teardown
+
+*** Variables ***
+## Define variable here
+${ROBOT_VERSION}  1.3.0
+${ROBOT_CONTINUE_ON_FAILURE}  True
+@{DUTS}=  N5K-1  N5K-2
+# The wait time in seconds.
+${wait_time}=  5
+
+*** Keywords ***
+# Testcase Setup
+#    Setup logic
+
+# Testcase Teardown
+#    Teardown logic
+
+*** Test Cases ***
+Connect to Device
+    # Tell Robot Framework what testbed file to use.
+    load testbed
+    # Instruct robot to connect to vty on the device - SSH
+    connect to all devices
+    # Run a command
+Verify Version
+    #Create Loop to verify software version
+    :FOR    ${DUT}    IN     @{DUTS}
+        # Instruct robot to connect to vty on the device - TELNET
+        \   connect to device "${DUT}"
+        \   Log To Console  Connected to device ${DUT}
+        \   run "show version" on ${DUT}
+        \   output contains is "5.2(1)N1(9b)"
+        \   Log To Console  version is verified on ${DUT}
+
+    #run ${command}
+    # Check if a info is in the output
+    # output contains ${info}
+    # Store a value from the output
+    # ${VALUE}=  extract pattern ${regex_to_match}
