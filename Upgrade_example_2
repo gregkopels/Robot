@@ -1,0 +1,63 @@
+*** Settings ***
+Library     agilis_robot.library.basic
+Library     agilis_robot.library.config
+Library     agilis_robot.library.iosxr.routing
+Library     agilis_robot.library.spirent
+Library     agilis_robot.library.ixia
+Library     agilis_robot.library.debug
+Library     String
+Library     BuiltIn
+Library     Dialogs
+Library     DateTime
+Library 	  Collections
+
+*** Keywords ***
+# Define user defined keywords if needed
+
+*** Variables ***
+## Define variable here
+${ROBOT_VERSION}    1.4.0rc1
+${DUT}=  TOPO-NEW3-3048TP-SW1-POD7
+${CURRENT_VERSION}=  nxos.7.0.3.I4.7.bin
+${UPGRADE_VERSION}=  nxos.7.0.3.I4.7.bin
+
+*** Test Cases ***
+# Define writing your robot program
+Connect to Device
+    load testbed
+    connect to device "${DUT}"
+Verify Current Image Version
+    run "show version"
+    run "sh version | i 'NXOS image file is:'"
+    output contains "${CURRENT_VERSION}"
+    #${run_cfg}=  run parsed "show version"
+    #Log  ${run_cfg}
+    #${VERSION}=  get parsed "Version"
+    #Should be Equal  ${VERSION}  7.0.3.I4.7
+    Set Test Message  Current Version of ${DUT} is ${CURRENT_VERSION}
+Check Upgrade Image Versison is present on the DUT
+    run "dir bootflash:///"
+    run "dir bootflash:/// | i ${UPGRADE_VERSION}"
+    Set Test Message  bootflash contains ${UPGRADE_VERSION}
+Backup running configuration before upgrade procedure
+    run "copy running-config bootflash:robot_before_upgrade_$(SWITCHNAME)_$(TIMESTAMP)"
+Set Boot variable to Upgrade Image Versison
+    run "show boot"
+    run "conf t"
+    run "boot nxos bootflash:${UPGRADE_VERSION}"
+    sleep  30
+Verify Boot variable is set to Upgrade Image Versison in running configuraton
+    run "show run | i boot"
+    output contains "boot nxos bootflash:${UPGRADE_VERSION}"
+Save and reload the switch to complete upgrade process
+    run "copy running-config startup-config"
+    #run terminal dont-ask
+    #run reload
+#Wait 300 seconds for the device to come back up
+    #wait 300
+    #need to add the switch comes backup - extract pattern
+Disconnect and reconnect to make sure the upgrade is complete
+    disconnect from device "${DUT}"
+    sleep  15
+    connect to device "${DUT}"
+    run "show run | i boot"

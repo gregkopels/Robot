@@ -18,11 +18,13 @@ Library   Collections
 
 *** Variables ***
 ## Define variable here
-${ROBOT_VERSION}  1.3.0
+${ROBOT_VERSION}    1.4.0rc1
 ${ROBOT_CONTINUE_ON_FAILURE}  True
-@{DUTS}=  N5K-1  N5K-2
+@{DUTS}=  N5K-E-1-13  N5K-E-1-14
 # The wait time in seconds.
 ${wait_time}=  5
+${CURRENT_VERSION}=  n6000-uk9.7.0.2.N1.1.bin
+${UPGRADE_VERSION}=  n6000-uk9.7.1.5.N1.1.bin
 
 *** Keywords ***
 # Testcase Setup
@@ -37,16 +39,37 @@ Connect to Device
     load testbed
     # Instruct robot to connect to vty on the device - SSH
     connect to all devices
+    #connect to device "${DUTS}"
     # Run a command
-Verify Version
+Verify Current Image Version
+    #DUT1
+    use device "N5K-E-1-13"
+    run "show version | i 'system image file is:'"
+    output contains "${CURRENT_VERSION}"
+    #
+Check Upgrade Image Versison is present on the DUT
+    use device "N5K-E-1-13"
+    run "dir bootflash: | i ${UPGRADE_VERSION}"
+    #Set Test Message  bootflash contains ${UPGRADE_VERSION}
+    #DUT2
+    #run "show version" on "N5K-E-1-14"
+    #run "sh version | i system | i image"
+    #output contains "${CURRENT_VERSION}"
+    #${run_cfg}=  run parsed "show version"
+    #Log  ${run_cfg}
+    #${VERSION}=  get parsed "Version"
+    #Should be Equal  ${VERSION}  7.0.3.I4.7
+    #Set Test Message  Current Version of ${DUT} is ${CURRENT_VERSION}
+    #
     #Create Loop to verify software version
-    :FOR    ${DUT}    IN     @{DUTS}
+    #:FOR    ${DUT}    IN     @{DUTS}
         # Instruct robot to connect to vty on the device - TELNET
-        \   connect to device "${DUT}"
-        \   Log To Console  Connected to device ${DUT}
-        \   run "show version" on ${DUT}
-        \   output contains is "5.2(1)N1(9b)"
-        \   Log To Console  version is verified on ${DUT}
+    #    \   connect to device "${DUT}"
+    #    \   Log To Console  Connected to device ${DUT}
+    #    \   run "term len 0"
+    #    \   run "sh version | i system | i image"
+    #    \   output contains ${CURRENT_VERSION}
+    #    \   Set Test Message  Current Version of ${DUT} is ${CURRENT_VERSION}
 
     #run ${command}
     # Check if a info is in the output
