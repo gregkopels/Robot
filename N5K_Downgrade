@@ -1,0 +1,90 @@
+*** Settings ***
+Library     agilis_robot.library.basic
+Library     agilis_robot.library.config
+Library     agilis_robot.library.iosxr.routing
+Library     agilis_robot.library.ixia
+Library     agilis_robot.library.debug
+Library     String
+Library     BuiltIn
+Library     Dialogs
+Library     DateTime
+Library 	Collections
+
+*** Keywords ***
+# Define user defined keywords if needed
+
+*** Variables ***
+## Define variable here
+${ROBOT_VERSION}    1.4.0rc1
+${ROBOT_CONTINUE_ON_FAILURE}  True
+${DUT1}=  N5K-E-1-13
+${DUT2}=  N5K-E-1-14
+@{DUTS}=  N5K-E-1-13 N5K-E-1-14
+# The wait time in seconds.
+${wait_time}=  5
+${CURRENT_VERSION}=  n6000-uk9.7.0.2.N1.1.bin
+${UPGRADE_VERSION}=  n6000-uk9.7.1.5.N1.1.bin
+${CURRENT_KICKSTART}=  n6000-uk9-kickstart.7.0.2.N1.1.bin
+${UPGRADE_KICKSTART}=  n6000-uk9-kickstart.7.1.5.N1.1.bin
+
+
+*** Test Cases ***
+# Define writing your robot program
+Connect to Device
+    load testbed
+    connect to all devices
+Verify DUT1 Current Image Version
+    use device "${DUT1}"
+    run "show version | i 'system image file is:'"
+    output contains "${UPGRADE_VERSION}"
+    Set Test Message  Current Version of ${DUT1} is ${UPGRADE_VERSION}
+Verify DUT1 Current Kickstart Version
+    use device "${DUT1}"
+    run "show version | i 'kickstart image file is'"
+    output contains "${UPGRADE_KICKSTART}"
+    Set Test Message  Current Version of ${DUT1} is ${UPGRADE_KICKSTART}
+#Verify DUT2 Current Image Version
+    #use device "${DUT2}"
+    #run "show version | i 'system image file is:'"
+    #output contains "${CURRENT_VERSION}"
+    #Set Test Message  Current Version of ${DUT2} is ${CURRENT_VERSION}
+#Verify DUT2 Current Kickstart Version
+    #use device "${DUT2}"
+    #run "show version | i 'kickstart image file is'"
+    #output contains "${CURRENT_KICKSTART}"
+    #Set Test Message  Current Version of ${DUT2} is ${CURRENT_KICKSTART}
+Check Downgrade Image Versison is present on the DUT1
+    use device "${DUT1}"
+    run "dir bootflash: | i ${CURRENT_VERSION}"
+    Set Test Message  Upgrade Version of ${DUT1} is ${CURRENT_VERSION}
+Check Downgrade Kickstart Versison is present on the DUT1
+    use device "${DUT1}"
+    run "dir bootflash: | i ${CURRENT_KICKSTART}"
+    Set Test Message  Upgrade Version of ${DUT1} is ${CURRENT_KICKSTART}
+#Check Upgrade Image Versison is present on the DUT2
+    #use device "${DUT2}"
+    #run "dir bootflash: | i ${UPGRADE_VERSION}"
+    #Set Test Message  Upgrade Version of ${DUT2} is ${UPGRADE_VERSION}
+#Check Upgrade Kickstart Versison is present on the DUT2
+    #use device "${DUT2}"
+    #run "dir bootflash: | i ${UPGRADE_KICKSTART}"
+    #Set Test Message  Upgrade Version of ${DUT2} is ${UPGRADE_KICKSTART}
+Set Boot variable to Upgrade Image Versison on DUT1
+    use device "${DUT1}"
+    run "conf t"
+    run "boot system bootflash:${CURRENT_VERSION}"
+    sleep  15
+    run "boot kickstart bootflash:${CURRENT_KICKSTART}"
+    sleep  15
+    run "show boot"
+    run "copy running-config startup-config "
+    sleep  20
+    #run "terminal dont-ask"
+    run "reload" and respond "y" to prompt matching pattern "continue? (y/n)"
+#Backup running configuration before upgrade procedure
+    #:FOR  ${DUT}  IN  @{DUTS}
+    #\  use device "${DUT}"
+    #\  run "show version"
+    #\  run "copy running-config bootflash:robot_before_upgrade_$(SWITCHNAME)_$(TIMESTAMP)"
+
+    

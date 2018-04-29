@@ -1,0 +1,121 @@
+*** Settings ***
+Library     agilis_robot.library.basic
+Library     agilis_robot.library.config
+Library     agilis_robot.library.iosxr.routing
+Library     agilis_robot.library.ixia
+Library     agilis_robot.library.debug
+Library     String
+Library     BuiltIn
+Library     Dialogs
+Library     DateTime
+Library     Collections
+
+*** Keywords ***
+# Define user defined keywords if needed
+
+*** Variables ***
+## Define variable here
+${ROBOT_VERSION}    1.4.0rc1
+${ROBOT_CONTINUE_ON_FAILURE}  True
+${DUT1}=  N5K-E-1-13
+${DUT2}=  N5K-E-1-14
+@{DUTS}=  N5K-E-1-13 N5K-E-1-14
+# The wait time in seconds.
+${wait_time}=  5
+${CURRENT_VERSION}=  n6000-uk9.7.0.2.N1.1.bin
+${UPGRADE_VERSION}=  n6000-uk9.7.1.5.N1.1.bin
+${CURRENT_KICKSTART}=  n6000-uk9-kickstart.7.0.2.N1.1.bin
+${UPGRADE_KICKSTART}=  n6000-uk9-kickstart.7.1.5.N1.1.bin
+${VER_9.7.0.2_MD5}=  74c249c8a4f4d2a0bdba073bd0c8fbba
+${VER_9.7.1.5_MD5}=  2abb02b3d01539750ea304f3987ba61a
+${KICK_9.7.0.2_MD5}=  77e20bb11776c68c41c219c540fe60ca
+${KICK_9.7.1.5_MD5}=  1c8890e9423708ef4f03c802704dfe1c
+
+
+*** Test Cases ***
+# Define writing your robot program
+Connect to Device
+    load testbed
+    connect to all devices
+Verify DUT1 Current Image Version
+    use device "${DUT1}"
+    run "show version | i 'system image file is:'"
+    output contains "${CURRENT_VERSION}"
+    Set Test Message  Current Version of ${DUT1} is ${CURRENT_VERSION}
+Verify DUT1 Current Kickstart Version
+    use device "${DUT1}"
+    run "show version | i 'kickstart image file is'"
+    output contains "${CURRENT_KICKSTART}"
+    Set Test Message  Current Version of ${DUT1} is ${CURRENT_KICKSTART}
+Verify DUT2 Current Image Version
+    use device "${DUT2}"
+    run "show version | i 'system image file is:'"
+    output contains "${CURRENT_VERSION}"
+    Set Test Message  Current Version of ${DUT2} is ${CURRENT_VERSION}
+Verify DUT2 Current Kickstart Version
+    use device "${DUT2}"
+    run "show version | i 'kickstart image file is'"
+    output contains "${CURRENT_KICKSTART}"
+    Set Test Message  Current Version of ${DUT2} is ${CURRENT_KICKSTART}
+Check DUT1 Upgrade Image Versison is present
+    use device "${DUT1}"
+    run "dir bootflash: | i ${UPGRADE_VERSION}"
+    output contains "${UPGRADE_VERSION}"
+    Set Test Message  Upgrade Version of ${DUT1} is ${UPGRADE_VERSION}
+Check DUT1 Upgrade Kickstart Versison is present
+    use device "${DUT1}"
+    run "dir bootflash: | i ${UPGRADE_KICKSTART}"
+    output contains "${UPGRADE_KICKSTART}"
+    Set Test Message  Upgrade Version of ${DUT1} is ${UPGRADE_KICKSTART}
+Verify DUT1 Upgrade Image MD5
+    use device "${DUT1}"
+    run "show file bootflash:${UPGRADE_VERSION} md5sum"
+    output contains "${VER_9.7.1.5_MD5}"
+Verify DUT1 Upgrade Kickstart MD5
+    use device "${DUT1}"
+    run "show file bootflash:${UPGRADE_KICKSTART} md5sum"
+    output contains "${KICK_9.7.1.5_MD5}"
+Check DUT2 Upgrade Image Versison is present
+    use device "${DUT2}"
+    run "dir bootflash: | i ${UPGRADE_VERSION}"
+    Set Test Message  Upgrade Version of ${DUT2} is ${UPGRADE_VERSION}
+Check DUT2 Upgrade Kickstart Versison is present
+    use device "${DUT2}"
+    run "dir bootflash: | i ${UPGRADE_KICKSTART}"
+    Set Test Message  Upgrade Version of ${DUT2} is ${UPGRADE_KICKSTART}
+Verify DUT2 Upgrade Image MD5
+    use device "${DUT2}"
+    run "show file bootflash:${UPGRADE_VERSION} md5sum"
+    output contains "${VER_9.7.1.5_MD5}"
+Verify DUT2 Upgrade Kickstart MD5
+    use device "${DUT2}"
+    run "show file bootflash:${UPGRADE_KICKSTART} md5sum"
+    output contains "${KICK_9.7.1.5_MD5}"
+Set DUT1 Boot variable to Upgrade Versison
+    use device "${DUT1}"
+    run "conf t"
+    run "boot system bootflash:${UPGRADE_VERSION}"
+    sleep  15
+    run "boot kickstart bootflash:${UPGRADE_KICKSTART}"
+    sleep  15
+    run "show boot"
+    run "copy running-config startup-config"
+Set DUT2 Boot variable to Upgrade Versison
+    use device "${DUT2}"
+    run "conf t"
+    run "boot system bootflash:${UPGRADE_VERSION}"
+    sleep  15
+    run "boot kickstart bootflash:${UPGRADE_KICKSTART}"
+    sleep  15
+    run "show boot"
+    run "copy running-config startup-config"
+Backup DUT1 running configuration before upgrade procedure
+    use device "${DUT1}"
+    #run "copy running-config bootflash:robot_before_upgrade_$(SWITCHNAME)_$(TIMESTAMP)"
+    run "terminal dont-ask"
+    run "reload"
+Backup DUT2 running configuration before upgrade procedure
+    use device "${DUT2}"
+    #run "copy running-config bootflash:robot_before_upgrade_$(SWITCHNAME)_$(TIMESTAMP)"
+    run "terminal dont-ask"
+    run "reload"

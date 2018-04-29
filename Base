@@ -20,7 +20,8 @@ Library   Collections
 ## Define variable here
 ${ROBOT_VERSION}    1.4.0rc1
 ${ROBOT_CONTINUE_ON_FAILURE}  True
-@{DUTS}=  N5K-E-1-13  N5K-E-1-14
+${DUT1}=  N5K-E-1-13
+${DUT2}=  N5K-E-1-14
 # The wait time in seconds.
 ${wait_time}=  5
 ${CURRENT_VERSION}=  n6000-uk9.7.0.2.N1.1.bin
@@ -41,25 +42,45 @@ Connect to Device
     connect to all devices
     #connect to device "${DUTS}"
     # Run a command
-Verify Current Image Version
+Verify DUT1 Current Image Version
     #DUT1
-    use device "N5K-E-1-13"
+    use device "${DUT1}"
     run "show version | i 'system image file is:'"
     output contains "${CURRENT_VERSION}"
+    #${run_cfg}=  run parsed "show version"
+    #$Log  ${run_cfg}
+    #${VERSION}=  get parsed "Version"
+    #Should be Equal  ${VERSION}  7.0.3.I4.7
+    Set Test Message  Current Version of ${DUT1} is ${CURRENT_VERSION}
     #
-Check Upgrade Image Versison is present on the DUT
+#Verify DUT2 Current Image Version
+    #DUT2
+    #use device "${DUT2}"
+    #${installed_version}= 
+    #run "show version | i 'system image file is:'"
+    #output contains "${CURRENT_VERSION}"
+    #Set Test Message  Current Version of ${DUT1} is ${CURRENT_VERSION}
+    #
+Check Upgrade Image Versison is present on the DUT1
     use device "N5K-E-1-13"
     run "dir bootflash: | i ${UPGRADE_VERSION}"
+    Set Test Message  Upgrade Version of ${DUT1} is ${UPGRADE_VERSION}
+#Check Upgrade Image Versison is present on the DUT2
+    #use device "${DUT2}"
+    #run "show version | i 'system image file is:'"
+    #output contains "${CURRENT_VERSION}"
+    #${run_cfg}=  run parsed "show version"
+    #Log  ${run_cfg}
+    #${VERSION}=  get parsed "Version"
+    #Should be Equal  ${VERSION}  ${CURRENT_VERSION}
+    #Set Test Message  Current Version of ${DUT2} is ${VERSION}
     #Set Test Message  bootflash contains ${UPGRADE_VERSION}
     #DUT2
     #run "show version" on "N5K-E-1-14"
     #run "sh version | i system | i image"
     #output contains "${CURRENT_VERSION}"
     #${run_cfg}=  run parsed "show version"
-    #Log  ${run_cfg}
-    #${VERSION}=  get parsed "Version"
-    #Should be Equal  ${VERSION}  7.0.3.I4.7
-    #Set Test Message  Current Version of ${DUT} is ${CURRENT_VERSION}
+
     #
     #Create Loop to verify software version
     #:FOR    ${DUT}    IN     @{DUTS}
