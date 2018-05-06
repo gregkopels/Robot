@@ -1,0 +1,54 @@
+*** Settings ***
+# Uncomment out libraries that are needed
+# http://agilis-api-docs.cisco.com/#agilis_robot/keywords/agilis_robot.library.basic/
+Library     agilis_robot.library.basic
+# Include all the keywords from the opensource libraries from robot framework:
+# http://robotframework.org/robotframework/#standard-libraries
+Library     String
+Library     BuiltIn
+Library     Dialogs
+Library     DateTime
+Library   Collections
+
+# If you'd like to have a setup and a teardown. Note: Suite setup and suite teardown
+# will be run before and after each test case in the *** Test Cases *** section
+# (if you only want each to run once, then only have one test case)
+# Suite Setup   Testcase Setup
+# Suite Teardown    Testcase Teardown
+
+*** Variables ***
+## Define variable here
+${ROBOT_VERSION}    1.4.0rc1
+${ROBOT_CONTINUE_ON_FAILURE}  True
+${DUT1}=  N5K-E-1-13
+${DUT2}=  N5K-E-1-14
+# The wait time in seconds.
+${wait_time}=  5
+${CURRENT_VERSION}=  n6000-uk9.7.0.2.N1.1.bin
+${UPGRADE_VERSION}=  n6000-uk9.7.1.5.N1.1.bin
+
+# Declare globally, set in tests.
+${global_route}
+
+*** Keywords ***
+
+# Teardown logic
+
+*** Test Cases ***
+Connect to Device
+    # Tell Robot Framework what testbed file to use.
+    load testbed
+    # Instruct robot to connect to vty on the device - SSH
+    connect to all devices
+Check DUT1 Global Routing table
+    use device "${DUT1}"
+    ${response}=  run "show ip route summary | grep /"
+    log  ${response}
+    log  ${global_route}
+    Set suite variable  ${global_route}  ${response}
+Compare to DUT2 Global Routing table
+    use device "${DUT1}"
+    ${response}=  run "show ip route summary | grep /"
+    #Should Be Equal As Strings  ${response}  ${global_route}
+    Should contain  ${response}  ${global_route}
+

@@ -1,0 +1,125 @@
+*** Settings ***
+Library     agilis_robot.library.basic
+Library     agilis_robot.library.config
+Library     agilis_robot.library.iosxr.routing
+Library     agilis_robot.library.ixia
+Library     agilis_robot.library.debug
+Library     String
+Library     BuiltIn
+Library     Dialogs
+Library     DateTime
+Library 	Collections
+
+*** Keywords ***
+# Define user defined keywords if needed
+
+*** Variables ***
+## Define variable here
+${ROBOT_VERSION}    1.4.0rc1
+${ROBOT_CONTINUE_ON_FAILURE}  True
+${DUT1}=  N5K-E-1-13
+${DUT2}=  N5K-E-1-14
+@{DUTS}=  N5K-E-1-13 N5K-E-1-14
+# The wait time in seconds.
+${wait_time}=  5
+${CURRENT_VERSION}=  n6000-uk9.7.0.2.N1.1.bin
+${UPGRADE_VERSION}=  n6000-uk9.7.1.5.N1.1.bin
+${CURRENT_KICKSTART}=  n6000-uk9-kickstart.7.0.2.N1.1.bin
+${UPGRADE_KICKSTART}=  n6000-uk9-kickstart.7.1.5.N1.1.bin
+${VER_9.7.0.2_MD5}=  74c249c8a4f4d2a0bdba073bd0c8fbba
+${VER_9.7.1.5_MD5}=  2abb02b3d01539750ea304f3987ba61a
+${KICK_9.7.0.2_MD5}=  77e20bb11776c68c41c219c540fe60ca
+${KICK_9.7.1.5_MD5}=  1c8890e9423708ef4f03c802704dfe1c
+${show_run_primary}=  attachments:show_run_primary.txt
+# Declare globally, set in tests.
+${ip_route_pri}
+${run_config_pri}
+${ip_route_sec}
+${run_config_sec}
+
+
+*** Test Cases ***
+# Define writing your robot program
+Connect to Device
+    load testbed
+    connect to all devices
+Step 1. Verify Primary Current Image version
+    use device "${DUT1}"
+    run "show version | i 'system image file is:'"
+    output contains "${CURRENT_VERSION}"
+    Set Test Message  Current Version of ${DUT1} is ${CURRENT_VERSION}
+Step 2. Verify Primary current kickstart version
+    use device "${DUT1}"
+    run "show version | i 'kickstart image file is'"
+    output contains "${CURRENT_KICKSTART}"
+    Set Test Message  Current Version of ${DUT1} is ${CURRENT_KICKSTART}
+Step 3. Show Primary running configuration
+    use device "${DUT1}"
+    ${resp_run_pri}=  run "show run | beg host | exclude boot | exclude version | exclude !Time"
+    Set suite variable  ${run_config_pri}  ${resp_run_pri}
+Step 4. Show Primary ip route
+    use device "${DUT1}"
+    ${resp_route_pri}=  run "show ip route"
+    Set suite variable  ${ip_route_pri}  ${resp_route_pri}
+Step 5. Copy running configuration
+    use device "${DUT1}"
+    run "copy running-config startup-config"
+    sleep  20
+Step 6. TFTP Primary Download OS
+    use device "${DUT1}"
+    run "copy tftp://10.56.100.100/cpoc/n5k/${UPGRADE_VERSION} bootflash: vrf management"
+Step 7. Verify Secondary Current Image
+    use device "${DUT2}"
+    run "show version | i 'system image file is:'"
+    output contains "${CURRENT_VERSION}"
+    Set Test Message  Current Version of ${DUT2} is ${CURRENT_VERSION}
+Step 8. Verify Secondary current kickstart version
+    use device "${DUT2}"
+    run "show version | i 'kickstart image file is'"
+    output contains "${CURRENT_KICKSTART}"
+    Set Test Message  Current Version of ${DUT2} is ${CURRENT_KICKSTART}
+Step 9. Show Secondary running configuration
+    use device "${DUT2}"
+    ${resp_run_sec}=  run "show run | beg host | exclude boot | exclude version | exclude !Time"
+    Set suite variable  ${run_config_sec}  ${resp_run_sec}
+Step 10. Show Secondary ip route
+    use device "${DUT2}"
+    ${resp_route_sec}=  run "show ip route"
+    Set suite variable  ${ip_route_sec}  ${resp_route_sec}
+Step 5. Copy Secondary running configuration
+    use device "${DUT2}"
+    run "copy running-config startup-config"
+    sleep  20
+Step 7. Wait for the tftp transfer to complete
+    #Work around to monitor, wait and sleep commands
+    disconnect from device "${DUT1}"
+    sleep  660
+Step 8. Verify OS download and MD5
+    connect to device "${DUT1}"
+    use device "${DUT1}"
+    run "show file bootflash:${UPGRADE_VERSION} md5sum"
+    output contains "${VER_9.7.1.5_MD5}"
+Step 9. TFTP Primary Download Kickstart
+    use device "${DUT1}"
+    run "copy tftp://10.56.100.100/cpoc/n5k/${UPGRADE_KICKSTART} bootflash: vrf management"
+Step 10. Wait for the tftp transfer to complete
+    #Work around to monitor, wait and sleep commands
+    disconnect from device "${DUT1}"
+    sleep  660
+Step 11. Verify Kickstart download and MD5
+    connect to device "${DUT1}"
+    use device "${DUT1}"
+    run "show file bootflash:${UPGRADE_KICKSTART} md5sum"
+    output contains "${KICK_9.7.1.5_MD5}"
+Step 12. Run install all command
+    use device "${DUT1}"
+    run "terminal dont-ask"
+    run "install all system bootflash:${UPGRADE_VERSION} kickstart bootflash:${UPGRADE_KICKSTART} force"
+Step 13. Disconnect and wait for reload
+    #disconnect from device "${DUT1}"
+    sleep  660
+Step 14. Backup DUT1 running configuration before upgrade procedure
+    connect to device "${DUT1}"
+    use device "${DUT1}"
+    monitor command "show fex" until output contains "AA Version Mismatch" or "600" seconds
+Step 15. 
